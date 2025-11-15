@@ -14,7 +14,7 @@ import json
 import yaml
 from datetime import datetime
 from tqdm import tqdm
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, get_context
 import os
 
 from r5py_router import R5Router
@@ -242,8 +242,11 @@ class ParallelGridHeatMapGenerator:
             'analysis_date': self.config['analysis_date']
         }
 
-        # Create process pool
-        with Pool(processes=self.num_workers, initializer=_init_worker, initargs=(worker_config,)) as pool:
+        # Create process pool using 'spawn' method (not 'fork')
+        # This is required for r5py/JPype to work in multiprocessing
+        # 'spawn' starts fresh Python process, avoiding Java VM fork issues
+        ctx = get_context('spawn')
+        with ctx.Pool(processes=self.num_workers, initializer=_init_worker, initargs=(worker_config,)) as pool:
             for ring in range(max_rings + 1):
                 ring_points = self.generate_ring_points(ring)
 
