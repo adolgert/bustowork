@@ -11,6 +11,9 @@ shapely>=2.0.0  # Geometric operations
 pyproj>=3.6.0  # Coordinate transformations
 rtree>=1.0.0  # Spatial indexing
 
+# Routing
+r5py>=0.1.0  # Fast transit routing with GTFS (requires Java)
+
 # Geocoding
 geopy>=2.4.0  # Address to coordinate conversion
 
