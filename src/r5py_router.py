@@ -171,10 +171,10 @@ def download_osm_data(
     print(f"Downloading OSM data for {place_name}...")
     print("  (This may take several minutes on first run)")
 
-    # Download graph
-    graph = ox.graph_from_place(place_name, network_type='walk')
+    # Download graph (unsimplified for OSM XML export)
+    graph = ox.graph_from_place(place_name, network_type='walk', simplify=False)
 
-    # Save as OSM XML first
+    # Save as OSM XML
     xml_path = output_path.with_suffix('.osm')
     ox.save_graph_xml(graph, filepath=xml_path)
 
