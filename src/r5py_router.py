@@ -135,12 +135,12 @@ class R5Router:
         if results.empty:
             return None
 
-        # Return travel time in minutes
-        travel_time_seconds = results.iloc[0]['travel_time']
-        if pd.isna(travel_time_seconds):
+        # Return travel time in minutes (r5py already returns minutes, not seconds)
+        travel_time_minutes = results.iloc[0]['travel_time']
+        if pd.isna(travel_time_minutes):
             return None
 
-        return travel_time_seconds / 60.0
+        return float(travel_time_minutes)
 
 
 def download_osm_data(

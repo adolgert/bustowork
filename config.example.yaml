@@ -18,6 +18,11 @@ max_trip_time: 60  # minutes - maximum total trip time to consider
 time_window_start: "06:00"  # start of analysis window
 time_window_end: "19:00"  # end of analysis window (6am to 7pm = 13 hours)
 
+# Analysis Date (must be a weekday within GTFS service period)
+# Current GTFS data is valid: Oct 19, 2025 - Feb 21, 2026
+# Recommended weekday dates: 2025-11-19 (Wed), 2025-12-10 (Wed), 2026-01-14 (Wed)
+analysis_date: "2025-11-19"  # Wednesday
+
 # Data Paths
 gtfs_path: "data/GTFS.zip"  # path to GTFS zip file
 
