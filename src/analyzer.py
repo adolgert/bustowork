@@ -27,7 +27,7 @@ class TimeDistributionAnalyzer:
         work_lon: float,
         time_window_start: str = "06:00",
         time_window_end: str = "19:00",
-        analysis_date: str = "2025-01-15"  # Weekday
+        analysis_date: str = "2025-11-19"  # Wednesday (within GTFS range)
     ):
         """
         Initialize analyzer.
@@ -279,7 +279,8 @@ def main():
         work_lat,
         work_lon,
         time_window_start=config['time_window_start'],
-        time_window_end=config['time_window_end']
+        time_window_end=config['time_window_end'],
+        analysis_date=config.get('analysis_date', '2025-11-19')  # Default to Nov 19 if not in config
     )
 
     # Test with a location in Shadyside (about 1 mile from CMU)
