@@ -36,17 +36,12 @@ def check_osm_data():
     """Check if OSM data exists."""
     print("\nChecking for OSM data...")
 
-    pbf_path = Path("data/pittsburgh.osm.pbf")
-    osm_path = Path("data/pittsburgh.osm")
+    pbf_path = Path("data/pennsylvania.osm.pbf")
 
     if pbf_path.exists():
         print(f"  ✓ Found PBF file: {pbf_path}")
+        print(f"  Size: {pbf_path.stat().st_size / 1024 / 1024:.1f} MB")
         return pbf_path
-    elif osm_path.exists():
-        print(f"  ✓ Found OSM file: {osm_path}")
-        print("  → For better performance, convert to PBF:")
-        print(f"     osmconvert {osm_path} -o={pbf_path}")
-        return osm_path
     else:
         print("  ✗ OSM data not found")
         return None
@@ -55,33 +50,52 @@ def check_osm_data():
 def download_osm_data():
     """Download OSM data for Pittsburgh."""
     print("\nDownloading OSM data for Pittsburgh...")
-    print("(This may take several minutes)")
+    print("(This may take a few minutes)")
 
     try:
-        import osmnx as ox
+        import requests
 
-        # Download Pittsburgh street network
-        print("  Downloading street network...")
-        graph = ox.graph_from_place(
-            "Pittsburgh, Pennsylvania, USA",
-            network_type='walk'
-        )
+        # Download from Geofabrik
+        # Pennsylvania PBF file (~300MB) - covers Pittsburgh
+        pbf_url = "https://download.geofabrik.de/north-america/us/pennsylvania-latest.osm.pbf"
 
-        # Save as OSM XML
-        osm_path = Path("data/pittsburgh.osm")
-        osm_path.parent.mkdir(parents=True, exist_ok=True)
+        pbf_path = Path("data/pennsylvania.osm.pbf")
+        pbf_path.parent.mkdir(parents=True, exist_ok=True)
 
-        print(f"  Saving to {osm_path}...")
-        ox.save_graph_xml(graph, filepath=str(osm_path))
+        if pbf_path.exists():
+            print(f"  ✓ PBF file already exists: {pbf_path}")
+            return pbf_path
 
-        print(f"  ✓ Downloaded to {osm_path}")
-        print(f"  Size: {osm_path.stat().st_size / 1024 / 1024:.1f} MB")
+        print(f"  Downloading from Geofabrik...")
+        print(f"  URL: {pbf_url}")
+        print(f"  Note: This downloads Pennsylvania data (~300MB)")
 
-        return osm_path
+        response = requests.get(pbf_url, stream=True)
+        response.raise_for_status()
+
+        # Download with progress
+        total_size = int(response.headers.get('content-length', 0))
+        block_size = 8192
+        downloaded = 0
+
+        with open(pbf_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=block_size):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total_size:
+                        percent = (downloaded / total_size) * 100
+                        print(f"\r  Progress: {percent:.1f}% ({downloaded / 1024 / 1024:.1f} MB)", end='')
+
+        print()  # New line after progress
+        print(f"  ✓ Downloaded to {pbf_path}")
+        print(f"  Size: {pbf_path.stat().st_size / 1024 / 1024:.1f} MB")
+
+        return pbf_path
 
     except ImportError:
-        print("  ✗ osmnx not installed")
-        print("  Install with: pip install osmnx")
+        print("  ✗ requests library not installed")
+        print("  Install with: pip install requests")
         return None
     except Exception as e:
         print(f"  ✗ Error downloading: {e}")

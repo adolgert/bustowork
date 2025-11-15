@@ -78,8 +78,8 @@ class R5Router:
                 r5py.TransportMode.TRANSIT
             ]
 
-        # Create travel time matrix computer
-        travel_time_matrix = r5py.TravelTimeMatrixComputer(
+        # Create travel time matrix (returns results directly)
+        results = r5py.TravelTimeMatrix(
             self.transport_network,
             origins=origins,
             destinations=destinations,
@@ -88,9 +88,6 @@ class R5Router:
             max_time=timedelta(minutes=self.max_trip_duration),
             speed_walking=self.walking_speed
         )
-
-        # Compute travel times
-        results = travel_time_matrix.compute_travel_times()
 
         return results
 
@@ -209,14 +206,11 @@ def main():
         config = yaml.safe_load(f)
 
     # Check for OSM data
-    osm_path = Path("data/pittsburgh.osm.pbf")
+    osm_path = Path("data/pennsylvania.osm.pbf")
     if not osm_path.exists():
-        osm_xml = Path("data/pittsburgh.osm")
-        if not osm_xml.exists():
-            print("\nDownloading OSM data...")
-            osm_path = download_osm_data()
-        else:
-            osm_path = osm_xml
+        print("\nERROR: OSM data not found")
+        print("Run: python setup_r5py.py")
+        sys.exit(1)
 
     # Initialize router
     try:
@@ -233,7 +227,8 @@ def main():
         origin_lat, origin_lon = 40.4520, -79.9280  # Shadyside
         dest_lat, dest_lon = 40.4435, -79.9455  # 5000 Forbes
 
-        departure = datetime(2025, 1, 15, 8, 30, 0)
+        # Use date within GTFS calendar range (Oct 19, 2025 - Feb 21, 2026)
+        departure = datetime(2025, 11, 15, 8, 30, 0)
 
         travel_time = router.calculate_route_at_time(
             origin_lat, origin_lon,
