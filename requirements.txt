@@ -1,0 +1,31 @@
+# Core dependencies
+gtfs-kit>=6.0.0  # GTFS parsing and validation
+pandas>=2.0.0  # Data manipulation
+numpy>=1.24.0  # Numerical operations
+pyyaml>=6.0  # Config file parsing
+
+# Geospatial
+osmnx>=1.9.0  # Street network data
+geopandas>=0.14.0  # Geospatial data operations
+shapely>=2.0.0  # Geometric operations
+pyproj>=3.6.0  # Coordinate transformations
+rtree>=1.0.0  # Spatial indexing
+
+# Geocoding
+geopy>=2.4.0  # Address to coordinate conversion
+
+# Visualization
+plotly>=5.18.0  # Interactive plots and maps
+folium>=0.15.0  # Alternative mapping library
+matplotlib>=3.8.0  # Static plots
+
+# Web framework
+flask>=3.0.0  # Web server
+flask-cors>=4.0.0  # CORS support
+
+# LLM integration
+anthropic>=0.18.0  # Claude API client
+
+# Utilities
+tqdm>=4.66.0  # Progress bars
+requests>=2.31.0  # HTTP requests
