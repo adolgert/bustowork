@@ -15,43 +15,28 @@ See [project.md](project.md) for full project overview and [requirements.md](req
 
 ### Prerequisites
 
-1. **Python 3.9+**
-2. **Java Runtime Environment (JRE)** - required for r5py
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get install default-jre
+- **Python 3.9+**
+- **Java Runtime Environment (JRE)** - required for r5py routing engine
+- **GTFS Data** - Pittsburgh Regional Transit data (already in `data/GTFS.zip`)
 
-   # macOS
-   brew install openjdk
-
-   # Windows
-   # Download from https://www.java.com/
-   ```
-
-3. **GTFS Data** - Pittsburgh Regional Transit data (already in `data/GTFS.zip`)
+📋 **See [INSTALL.md](INSTALL.md) for detailed installation instructions for all platforms.**
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   cd bustowork
-   ```
+```bash
+# 1. Install Java (see INSTALL.md for your platform)
+java -version  # verify Java is installed
 
-2. **Install Python dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+# 2. Install Python dependencies
+pip install -r requirements.txt
 
-3. **Run setup script** (downloads OSM data)
-   ```bash
-   python setup_r5py.py
-   ```
+# 3. Download OSM data
+python setup_r5py.py
 
-4. **Create config file**
-   ```bash
-   cp config.example.yaml config.yaml
-   # Edit config.yaml with your work address
-   ```
+# 4. Create your config file
+cp config.example.yaml config.yaml
+# Edit config.yaml with your work address
+```
 
 ### Configuration
 
@@ -208,21 +193,14 @@ Private project - not for distribution.
 
 ## Troubleshooting
 
-### "Java not found"
-Install Java JRE (see Prerequisites above).
+For detailed troubleshooting including platform-specific issues, see [INSTALL.md](INSTALL.md).
 
-### "OSM data not found"
-Run `python setup_r5py.py` to download Pittsburgh street network.
+Common issues:
 
-### "No route found"
-- Check that work address is in Pittsburgh
-- Verify GTFS data is in `data/GTFS.zip`
-- Try increasing `max_walk_to_stop` or `max_trip_time`
-
-### Routing is slow
-- r5py requires Java - make sure it's installed
-- First run builds transport network (slower), subsequent runs are faster
-- OSM PBF format is faster than OSM XML - convert if possible
+- **"Java not found"** - Install Java JRE (see INSTALL.md)
+- **"OSM data not found"** - Run `python setup_r5py.py`
+- **"No route found"** - Check work address is in Pittsburgh, verify GTFS data exists
+- **Routing is slow** - First run builds network (takes time), subsequent runs are faster
 
 ## Contact
 
