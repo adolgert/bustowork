@@ -21,35 +21,48 @@ from r5py_router import R5Router
 from analyzer import TimeDistributionAnalyzer
 
 
-# Global config for worker processes
+# Global variables for worker processes
+_WORKER_ROUTER = None
 _WORKER_CONFIG = None
 
 
 def _init_worker(config_dict):
-    """Initialize worker process with r5py router and analyzer."""
-    global _WORKER_CONFIG
+    """
+    Initialize worker process with r5py router.
+
+    This is called once per worker process at startup.
+    Building the transport network takes ~1 minute and ~2GB RAM.
+    """
+    global _WORKER_ROUTER, _WORKER_CONFIG
     _WORKER_CONFIG = config_dict
+
+    print(f"Worker {os.getpid()}: Initializing r5py transport network...")
+
+    # Build router once per worker (expensive!)
+    _WORKER_ROUTER = R5Router(
+        gtfs_path=config_dict['gtfs_path'],
+        osm_path=config_dict['osm_path'],
+        max_walk_time=config_dict['max_walk_time'],
+        max_trip_duration=config_dict['max_trip_duration'],
+        walking_speed=config_dict['walking_speed']
+    )
+
+    print(f"Worker {os.getpid()}: Ready!")
 
 
 def _analyze_point_worker(point_data):
     """
     Worker function to analyze a single grid point.
 
-    This runs in a separate process and has its own r5py instance.
+    Reuses the r5py router that was initialized once per worker.
     """
     lat, lon, ring = point_data
     config = _WORKER_CONFIG
 
-    # Initialize r5py router (each worker gets its own instance)
-    router = R5Router(
-        gtfs_path=config['gtfs_path'],
-        osm_path=config['osm_path'],
-        max_walk_time=config['max_walk_time'],
-        max_trip_duration=config['max_trip_duration'],
-        walking_speed=config['walking_speed']
-    )
+    # Reuse the router that was built in _init_worker
+    router = _WORKER_ROUTER
 
-    # Initialize analyzer
+    # Initialize analyzer (lightweight - just wraps the router)
     analyzer = TimeDistributionAnalyzer(
         router,
         config['work_lat'],
