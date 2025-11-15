@@ -5,10 +5,31 @@ Clear r5py cache to fix serialization errors.
 
 from pathlib import Path
 import shutil
-import r5py
+import os
+import sys
 
-# Get r5py cache directory
-cache_dir = r5py.config.Config().CACHE_DIR
+# Find r5py cache directory
+# Check common locations
+possible_cache_dirs = [
+    Path.home() / ".cache" / "r5py",  # Linux
+    Path.home() / "Library" / "Caches" / "r5py",  # macOS
+    Path(os.getenv("LOCALAPPDATA", "")) / "r5py" / "Cache" if os.name == 'nt' else None,  # Windows
+]
+
+cache_dir = None
+for dir_path in possible_cache_dirs:
+    if dir_path and dir_path.exists():
+        cache_dir = dir_path
+        break
+
+if not cache_dir:
+    # Try to import r5py and check if it has cache info
+    try:
+        # Just check default location
+        cache_dir = Path.home() / ".cache" / "r5py"
+    except:
+        print("Could not determine r5py cache directory")
+        sys.exit(1)
 
 print(f"r5py cache directory: {cache_dir}")
 
