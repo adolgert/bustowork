@@ -1,0 +1,144 @@
+{
+  "work_location": {
+    "lat": 40.4435,
+    "lon": -79.9455
+  },
+  "grid_spacing_feet": 500,
+  "max_score_threshold": 60,
+  "points": [
+    {
+      "lat": 40.4435,
+      "lon": -79.9455,
+      "score": 5.2,
+      "ring": 0,
+      "reachable_ratio": 1.0,
+      "statistics": {
+        "min": 0.5,
+        "median": 4.8,
+        "max": 12.3,
+        "mean": 5.1
+      }
+    },
+    {
+      "lat": 40.4482,
+      "lon": -79.9455,
+      "score": 12.5,
+      "ring": 1,
+      "reachable_ratio": 0.99,
+      "statistics": {
+        "min": 8.2,
+        "median": 11.5,
+        "max": 18.7,
+        "mean": 12.1
+      }
+    },
+    {
+      "lat": 40.4435,
+      "lon": -79.9502,
+      "score": 14.2,
+      "ring": 1,
+      "reachable_ratio": 0.98,
+      "statistics": {
+        "min": 9.5,
+        "median": 13.2,
+        "max": 21.5,
+        "mean": 13.8
+      }
+    },
+    {
+      "lat": 40.4435,
+      "lon": -79.9408,
+      "score": 11.8,
+      "ring": 1,
+      "reachable_ratio": 0.99,
+      "statistics": {
+        "min": 7.8,
+        "median": 11.0,
+        "max": 17.2,
+        "mean": 11.5
+      }
+    },
+    {
+      "lat": 40.4388,
+      "lon": -79.9455,
+      "score": 13.5,
+      "ring": 1,
+      "reachable_ratio": 0.97,
+      "statistics": {
+        "min": 8.9,
+        "median": 12.8,
+        "max": 19.8,
+        "mean": 13.1
+      }
+    },
+    {
+      "lat": 40.4529,
+      "lon": -79.9455,
+      "score": 18.7,
+      "ring": 2,
+      "reachable_ratio": 0.96,
+      "statistics": {
+        "min": 12.3,
+        "median": 17.5,
+        "max": 28.4,
+        "mean": 18.2
+      }
+    },
+    {
+      "lat": 40.4576,
+      "lon": -79.9455,
+      "score": 24.3,
+      "ring": 3,
+      "reachable_ratio": 0.94,
+      "statistics": {
+        "min": 16.7,
+        "median": 23.1,
+        "max": 35.6,
+        "mean": 23.8
+      }
+    },
+    {
+      "lat": 40.4435,
+      "lon": -79.9549,
+      "score": 22.1,
+      "ring": 2,
+      "reachable_ratio": 0.95,
+      "statistics": {
+        "min": 15.2,
+        "median": 20.9,
+        "max": 32.4,
+        "mean": 21.6
+      }
+    },
+    {
+      "lat": 40.4435,
+      "lon": -79.9361,
+      "score": 19.5,
+      "ring": 2,
+      "reachable_ratio": 0.96,
+      "statistics": {
+        "min": 13.8,
+        "median": 18.3,
+        "max": 29.7,
+        "mean": 19.1
+      }
+    },
+    {
+      "lat": 40.4341,
+      "lon": -79.9455,
+      "score": 21.8,
+      "ring": 2,
+      "reachable_ratio": 0.93,
+      "statistics": {
+        "min": 14.9,
+        "median": 20.6,
+        "max": 31.9,
+        "mean": 21.3
+      }
+    }
+  ],
+  "rings_analyzed": 3,
+  "total_points": 10,
+  "stopped_reason": "Sample data for testing",
+  "generation_time": "2025-11-15T22:30:00"
+}
