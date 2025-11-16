@@ -5,8 +5,11 @@ Flask web application for heat map visualization.
 from flask import Flask, render_template, jsonify
 from pathlib import Path
 import json
+import os
 
-app = Flask(__name__)
+# Flask app with template folder pointing to project root
+app = Flask(__name__,
+            template_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates'))
 
 
 @app.route('/')
@@ -18,7 +21,9 @@ def index():
 @app.route('/api/heatmap')
 def get_heatmap_data():
     """API endpoint to fetch heat map data."""
-    heatmap_file = Path('heatmap_data.json')
+    # Look for heatmap_data.json in project root (parent of src/)
+    project_root = Path(__file__).parent.parent
+    heatmap_file = project_root / 'heatmap_data.json'
 
     if not heatmap_file.exists():
         return jsonify({
@@ -35,7 +40,9 @@ def get_heatmap_data():
 @app.route('/api/stats')
 def get_stats():
     """API endpoint to fetch heat map statistics."""
-    heatmap_file = Path('heatmap_data.json')
+    # Look for heatmap_data.json in project root (parent of src/)
+    project_root = Path(__file__).parent.parent
+    heatmap_file = project_root / 'heatmap_data.json'
 
     if not heatmap_file.exists():
         return jsonify({'error': 'Heat map data not found'}), 404
