@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pittsburgh Commute Heat Map</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f5f5f5;
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.5rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .stat-unit {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #999;
+        }
+
+        #map-container {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        #heatmap {
+            width: 100%;
+            height: 700px;
+        }
+
+        .legend {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .legend h3 {
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .legend-color {
+            width: 40px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #2196f3;
+        }
+
+        .info-box p {
+            margin: 0.5rem 0;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Pittsburgh Commute Heat Map</h1>
+        <div class="subtitle">80th Percentile Travel Time Analysis</div>
+    </header>
+
+    <div class="container">
+        <div class="info-box">
+            <p><strong>How to read this map:</strong></p>
+            <p>• Yellow = Fast commute (close to work)</p>
+            <p>• Blue = Slower commute (farther from work)</p>
+            <p>• Click any point to see detailed travel time distribution</p>
+            <p>• Score represents 80th percentile: your "typical bad day" commute time</p>
+        </div>
+
+        <div id="stats-container" class="stats-grid">
+            <div class="loading">Loading statistics...</div>
+        </div>
+
+        <div id="map-container">
+            <div id="heatmap">
+                <div class="loading">Loading heat map...</div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <h3>Understanding the Analysis</h3>
+            <p style="margin-bottom: 1rem;">
+                Each grid point represents a potential home location. For each location, we calculated:
+            </p>
+            <ul style="margin-left: 2rem; line-height: 1.8;">
+                <li><strong>1,560 travel times</strong> - every minute from 6am-7pm, both to and from work</li>
+                <li><strong>80th percentile</strong> - the score shown, representing slower commute times</li>
+                <li><strong>Bus frequency matters</strong> - frequent buses show better (lower) scores</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Fetch and display statistics
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(stats => {
+                const statsHtml = `
+                    <div class="stat-card">
+                        <div class="stat-label">Total Points</div>
+                        <div class="stat-value">${stats.total_points}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Rings Analyzed</div>
+                        <div class="stat-value">${stats.rings_analyzed}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Reachable</div>
+                        <div class="stat-value">${stats.reachable_points}<span class="stat-unit">pts</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Best Score</div>
+                        <div class="stat-value">${stats.score_min.toFixed(1)}<span class="stat-unit">min</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Median Score</div>
+                        <div class="stat-value">${stats.score_median.toFixed(1)}<span class="stat-unit">min</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">90th %ile</div>
+                        <div class="stat-value">${stats.percentiles['90th'].toFixed(1)}<span class="stat-unit">min</span></div>
+                    </div>
+                `;
+                document.getElementById('stats-container').innerHTML = statsHtml;
+            })
+            .catch(error => {
+                document.getElementById('stats-container').innerHTML =
+                    '<div class="error">Error loading statistics</div>';
+            });
+
+        // Fetch and display heat map
+        fetch('/api/heatmap')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('heatmap').innerHTML =
+                        `<div class="error">${data.message || data.error}</div>`;
+                    return;
+                }
+
+                // Prepare data for Plotly
+                const validPoints = data.points.filter(p => p.score !== null);
+
+                const lats = validPoints.map(p => p.lat);
+                const lons = validPoints.map(p => p.lon);
+                const scores = validPoints.map(p => p.score);
+
+                // Create hover text with detailed info
+                const hoverText = validPoints.map(p => {
+                    let text = `<b>Travel Time Score: ${p.score.toFixed(1)} min</b><br>`;
+                    text += `Location: ${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}<br>`;
+                    text += `Ring: ${p.ring}<br>`;
+                    text += `Reachability: ${(p.reachable_ratio * 100).toFixed(1)}%<br>`;
+                    if (p.statistics) {
+                        text += `<br><b>Distribution:</b><br>`;
+                        text += `Min: ${p.statistics.min?.toFixed(1)} min<br>`;
+                        text += `Median: ${p.statistics.median?.toFixed(1)} min<br>`;
+                        text += `Max: ${p.statistics.max?.toFixed(1)} min`;
+                    }
+                    return text;
+                });
+
+                // Create scatter plot with color scale
+                const trace = {
+                    type: 'scattermapbox',
+                    lat: lats,
+                    lon: lons,
+                    mode: 'markers',
+                    marker: {
+                        size: 12,
+                        color: scores,
+                        colorscale: [
+                            [0, '#FFD700'],     // Yellow (fast)
+                            [0.5, '#4169E1'],   // Royal Blue (medium)
+                            [1, '#00008B']      // Dark Blue (slow)
+                        ],
+                        showscale: true,
+                        colorbar: {
+                            title: 'Commute<br>Time<br>(min)',
+                            thickness: 20,
+                            len: 0.7
+                        },
+                        cmin: Math.min(...scores),
+                        cmax: Math.max(...scores)
+                    },
+                    text: hoverText,
+                    hovertemplate: '%{text}<extra></extra>'
+                };
+
+                // Add work location marker
+                const workTrace = {
+                    type: 'scattermapbox',
+                    lat: [data.work_location.lat],
+                    lon: [data.work_location.lon],
+                    mode: 'markers',
+                    marker: {
+                        size: 20,
+                        color: 'red',
+                        symbol: 'star'
+                    },
+                    text: '<b>Work Location</b>',
+                    hovertemplate: '%{text}<extra></extra>',
+                    name: 'Work'
+                };
+
+                const layout = {
+                    mapbox: {
+                        style: 'open-street-map',
+                        center: {
+                            lat: data.work_location.lat,
+                            lon: data.work_location.lon
+                        },
+                        zoom: 12
+                    },
+                    margin: { t: 0, b: 0, l: 0, r: 0 },
+                    showlegend: false,
+                    hovermode: 'closest'
+                };
+
+                const config = {
+                    responsive: true,
+                    displayModeBar: true,
+                    modeBarButtonsToRemove: ['lasso2d', 'select2d']
+                };
+
+                Plotly.newPlot('heatmap', [trace, workTrace], layout, config);
+            })
+            .catch(error => {
+                console.error('Error loading heat map:', error);
+                document.getElementById('heatmap').innerHTML =
+                    '<div class="error">Error loading heat map data</div>';
+            });
+    </script>
+</body>
+</html>
