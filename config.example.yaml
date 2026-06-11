@@ -2,29 +2,31 @@
 
 # Work Location
 work_address: "5000 Forbes Ave, Pittsburgh, PA"
+# Optional: skip geocoding by giving coordinates directly
+# work_lat: 40.4440
+# work_lon: -79.9465
 
-# Analysis Parameters
-max_time_threshold: 60  # minutes - heat map stops expanding when scores exceed this
-grid_spacing: 500  # feet between grid points
+# Heat Map
+grid_spacing: 500          # feet between grid points
+heatmap_radius_miles: 8.0  # grid radius around work
 
 # Commute Constraints
-walking_speed: 4.0  # mph
-max_walk_to_stop: 1.0  # miles
-max_transfers: 1  # maximum number of bus transfers
-max_transfer_wait: 30  # minutes - maximum wait time between transfers
-max_trip_time: 60  # minutes - maximum total trip time to consider
+walking_speed: 4.0   # mph
+max_transfers: 1     # maximum number of bus transfers
+max_trip_time: 90    # minutes - trips longer than this count as unreachable
 
-# Time Window
-time_window_start: "06:00"  # start of analysis window
-time_window_end: "19:00"  # end of analysis window (6am to 7pm = 13 hours)
+# Score: the Nth percentile of door-to-door travel time over all departure
+# minutes in the window (wait time included). One of: 10, 25, 50, 80, 95.
+score_percentile: 80
 
-# Analysis Date (must be a weekday within GTFS service period)
-# Current GTFS data is valid: Oct 19, 2025 - Feb 21, 2026
-# Recommended weekday dates: 2025-11-19 (Wed), 2025-12-10 (Wed), 2026-01-14 (Wed)
-analysis_date: "2025-11-19"  # Wednesday
+# Time Window - departure minutes sampled (every minute)
+time_window_start: "06:00"
+time_window_end: "19:00"
+
+# Simulated service date. "auto" picks the next Wednesday covered by the
+# GTFS feed's calendar; or set an explicit weekday like "2026-06-17".
+analysis_date: "auto"
 
 # Data Paths
-gtfs_path: "data/GTFS.zip"  # path to GTFS zip file
-
-# LLM Configuration (optional - for bus service descriptions)
-# anthropic_api_key: "your-api-key-here"  # or set ANTHROPIC_API_KEY env variable
+gtfs_path: "data/GTFS.zip"           # Pittsburgh Regional Transit GTFS feed
+osm_path: "data/pittsburgh.osm.pbf"  # cropped OSM extract (src/crop_osm.py)

@@ -1,207 +1,137 @@
 # Pittsburgh Commute Analysis Tool
 
-A personalized tool to evaluate residential locations in Pittsburgh based on transit accessibility using a custom time-to-work metric.
+Answers one question: from any spot in Pittsburgh, how long does it really
+take to get to work by walking and/or transit - *including the time spent
+waiting for the bus*?
 
-## Overview
+The model: you walk out the door at a uniformly random minute (6am-7pm by
+default) and take whatever gets you there soonest - walking, a bus, or a
+walk-to-stop-plus-bus combination. Sampling every departure minute gives a
+distribution of door-to-door times; a location's **score is the 80th
+percentile** of that distribution. A location with one bus an hour scores
+badly even though Google says it "has service." A location near several
+frequent lines scores well.
 
-This tool calculates commute times for every minute of the day (6am-7pm) in both directions (to and from work), then uses the 80th percentile as a location quality score. It produces:
+It produces:
 
-1. **Heat Map**: Interactive browser map showing commute scores across Pittsburgh
-2. **Address Lookup**: Detailed analysis of transit access for any address
+1. **Heat map** - interactive browser map of scores across the city
+2. **CLI query** - score for a single address or lat/lon, for house hunting
 
-See [project.md](project.md) for full project overview and [requirements.md](requirements.md) for detailed specifications.
+## How it works (and why it's fast)
 
-## Quick Start
+Routing uses [r5py](https://r5py.readthedocs.io/) / Conveyal R5. R5's
+range-RAPTOR computes travel-time percentiles over an entire departure
+window in a single request per origin - one JVM call replaces a
+call-per-minute loop. Origins are also fanned out across a thread pool
+(R5's network is read-only and thread-safe). Net effect: ~44 ms per grid
+point instead of ~2.5 minutes; a full 8-mile-radius map takes minutes, not
+days.
 
-### Prerequisites
-
-- **Python 3.9+**
-- **Java Runtime Environment (JRE)** - required for r5py routing engine
-- **GTFS Data** - Pittsburgh Regional Transit data (already in `data/GTFS.zip`)
-
-📋 **See [INSTALL.md](INSTALL.md) for detailed installation instructions for all platforms.**
-
-### Installation
+## Setup
 
 ```bash
-# 1. Install Java (see INSTALL.md for your platform)
-java -version  # verify Java is installed
+# 1. Java 21+ (required by r5py)
+java -version
 
-# 2. Install Python dependencies
-pip install -r requirements.txt
+# 2. Python dependencies
+python -m venv venv && venv/bin/pip install -r requirements.txt
 
-# 3. Download OSM data
-python setup_r5py.py
+# 3. Data: a PRT GTFS feed and an OSM extract
+#    GTFS: https://www.rideprt.org/developerresources/GTFS.zip -> data/GTFS.zip
+#    (strip header-only .txt tables from the zip if R5 complains)
+#    OSM: put pennsylvania.osm.pbf (e.g. from Geofabrik) in data/, then:
+venv/bin/python src/crop_osm.py   # -> data/pittsburgh.osm.pbf (~45 MB)
 
-# 4. Create your config file
-cp config.example.yaml config.yaml
-# Edit config.yaml with your work address
+# 4. Configure
+cp config.example.yaml config.yaml   # set work_address
 ```
 
-### Configuration
-
-Edit `config.yaml`:
-
-```yaml
-# Your work location (private - not committed to git)
-work_address: "5000 Forbes Ave, Pittsburgh, PA"
-
-# Analysis parameters
-max_time_threshold: 60  # minutes - heat map boundary
-grid_spacing: 500  # feet between grid points
-
-# Commute constraints
-walking_speed: 4.0  # mph
-max_walk_to_stop: 1.0  # miles
-max_transfers: 1
-max_transfer_wait: 30  # minutes
-max_trip_time: 60  # minutes
-
-# Time window (every minute from 6am to 7pm)
-time_window_start: "06:00"
-time_window_end: "19:00"
-```
+The GTFS feed expires every few months (see `feed_info.txt` inside the
+zip). `analysis_date: auto` picks a valid Wednesday automatically and
+warns when the feed is stale.
 
 ## Usage
 
-### Test Routing
-
-Test the routing engine with a single route:
+### Query one location
 
 ```bash
-python src/r5py_router.py
+venv/bin/python src/query.py "5500 Walnut St, Pittsburgh, PA"
+venv/bin/python src/query.py --latlon 40.4520 -79.9280
+venv/bin/python src/query.py "312 S Highland Ave" --both --json
 ```
 
-### Generate Heat Map
+Example output:
 
-Coming in Stage 4:
+```
+Leaving at a random minute 06:00-19:00 on 2026-06-17, walk or transit:
+
+  10% of departures arrive within  13.0 min
+  25% of departures arrive within  15.0 min
+  50% of departures arrive within  18.0 min
+  80% of departures arrive within  20.0 min  <- score
+  95% of departures arrive within  20.0 min
+
+  Walking only:  20.0 min   (cap: 90 min)
+```
+
+Other flags: `--both` (return-trip percentiles), `--json` (machine-readable),
+`--date YYYY-MM-DD` (simulate a specific service day), `--config PATH`.
+
+First run builds the transport network (~30 s); r5py caches it afterwards.
+
+### Generate the heat map
 
 ```bash
-python src/generate_heatmap.py --config config.yaml
+venv/bin/python src/generate_heatmap.py                    # full map
+venv/bin/python src/generate_heatmap.py --radius-miles 3   # quick test
 ```
 
-This will:
-- Start at your work location
-- Expand outward in a 500ft grid
-- Calculate 80th percentile commute time for each point
-- Stop when scores exceed your threshold
-- Save results to `heatmap_data.json`
+Writes `heatmap_data.json`.
 
-### Web Interface
-
-Coming in Stage 5:
+### View the heat map
 
 ```bash
-python src/app.py
+venv/bin/python src/app.py    # then open http://localhost:5000
 ```
 
-Then open http://localhost:5000 in your browser.
+## Project structure
 
-## Project Structure
+| File | Purpose |
+|------|---------|
+| `src/commute.py` | Core scorer: R5 departure-window percentiles, threaded fan-out |
+| `src/query.py` | CLI score for one address / lat-lon |
+| `src/generate_heatmap.py` | Grid scoring -> `heatmap_data.json` |
+| `src/app.py` + `templates/index.html` | Flask + Plotly heat map viewer |
+| `src/crop_osm.py` | Crop a state-sized PBF to the Pittsburgh area |
+| `src/geocoder.py` | Nominatim geocoding wrapper |
+| `src/router.py`, `src/gtfs_loader.py`, ... | Earlier hand-rolled router (superseded by r5py, kept as standalone tools) |
 
-```
-bustowork/
-├── data/
-│   ├── GTFS.zip              # Pittsburgh transit data
-│   └── pittsburgh.osm        # Street network (auto-downloaded)
-├── src/
-│   ├── gtfs_loader.py        # GTFS data loading
-│   ├── geocoder.py           # Address geocoding
-│   ├── street_network.py    # Walking distances
-│   ├── r5py_router.py        # Fast routing with r5py
-│   ├── analyzer.py           # Coming: Time distribution analysis
-│   ├── grid_generator.py    # Coming: Grid-based heat map
-│   └── app.py                # Coming: Web interface
-├── config.yaml               # Your settings (gitignored)
-├── config.example.yaml       # Example configuration
-├── requirements.txt          # Python dependencies
-├── setup_r5py.py            # Setup script
-└── README.md                # This file
+The old per-minute pipeline (`analyzer.py`, `grid_generator*.py`,
+`r5py_router.py`) was removed; see git history if you need it.
+
+## Moving to another machine
+
+```bash
+./package.sh            # writes bustowork-transfer.tar.gz (~100 MB)
 ```
 
-## Development Stages
+The tarball contains the code (with git history), `config.yaml`, the GTFS
+feed, the cropped OSM extract, and the generated heat map - so nothing
+needs recomputing. On the target machine you only install Java 21+ and the
+Python dependencies (instructions are printed by the script). Deliberately
+excluded: `venv/` (platform-specific, rebuild it), the 323 MB
+`pennsylvania.osm.pbf` (only needed to re-crop), and r5py's network cache
+in `~/.cache/r5py` (rebuilds automatically in ~30 s on first query).
 
-- [x] **Stage 1**: GTFS Foundation - Load transit data, find nearby stops
-- [x] **Stage 2**: Routing Engine - Calculate single trip times
-- [ ] **Stage 3**: Time Distribution - Calculate 1,560-sample distribution per location
-- [ ] **Stage 4**: Grid Heat Map - Expand outward from work, compute scores
-- [ ] **Stage 5**: Web Visualization - Interactive map interface
-- [ ] **Stage 6**: Address Lookup - LLM-powered transit descriptions
+## Notes
 
-## How It Works
-
-### The Custom Metric
-
-For each location:
-1. Calculate travel time for **every minute** from 6am to 7pm (780 minutes)
-2. Calculate both **to work** and **from work** (1,560 total samples)
-3. At each minute, find the **fastest route** (walking, direct bus, or one transfer)
-4. **80th percentile** of all times = location score
-
-This captures:
-- Bus frequency (buses every 10 min vs 30 min)
-- Coverage throughout the day
-- Worst-case scenarios (not just optimal times)
-
-### Grid Expansion Strategy
-
-Instead of analyzing the entire city:
-1. Start at work location
-2. Create 500ft grid around it
-3. Calculate scores for grid points
-4. Expand outward
-5. **Stop when scores exceed threshold** (e.g., 60 minutes)
-
-This naturally limits computation to relevant areas.
-
-## Technical Details
-
-### Routing Engine: r5py
-
-Uses [r5py](https://r5py.readthedocs.io/) - a Python wrapper for R5 (Rapid Realistic Routing):
-- Fast GTFS-based routing
-- Handles walking + multiple transit modes
-- Efficiently computes travel time matrices
-- Much faster than custom routing algorithms
-
-### Data Sources
-
-- **Transit**: Pittsburgh Regional Transit GTFS (buses + T light rail)
-- **Streets**: OpenStreetMap via osmnx
-- **Geocoding**: Nominatim (OpenStreetMap)
-
-### Performance
-
-With r5py:
-- Single route: **<1 second** (vs 30+ seconds with custom router)
-- 1,560 samples per location: **~10-20 minutes**
-- 400 grid points: **~60-120 hours** on local machine
-
-The expanding grid strategy significantly reduces this by only analyzing reachable areas.
-
-## Privacy
-
-Your work address is stored in `config.yaml` which is **gitignored**. Only the example config is committed to the repository.
-
-## Requirements
-
-See [requirements.md](requirements.md) for full specification.
+- The score counts a departure minute as unreachable when the trip exceeds
+  `max_trip_time` (default 90 min); if more than 20% of minutes are
+  unreachable the 80th-percentile score is null and the point shows as
+  missing on the map.
+- Keep `config.yaml` out of the repository if you consider your work
+  address private; only `config.example.yaml` is meant to be committed.
 
 ## License
 
 Private project - not for distribution.
-
-## Troubleshooting
-
-For detailed troubleshooting including platform-specific issues, see [INSTALL.md](INSTALL.md).
-
-Common issues:
-
-- **"Java not found"** - Install Java JRE (see INSTALL.md)
-- **"OSM data not found"** - Run `python setup_r5py.py`
-- **"No route found"** - Check work address is in Pittsburgh, verify GTFS data exists
-- **Routing is slow** - First run builds network (takes time), subsequent runs are faster
-
-## Contact
-
-This is a personal tool. See project documentation for details.

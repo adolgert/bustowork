@@ -95,21 +95,25 @@ This will install:
 
 **Note**: Some packages (especially geopandas and osmnx) may take several minutes to install.
 
-### 5. Download OpenStreetMap Data
+### 5. Download Map and Transit Data
 
-Run the setup script to download Pittsburgh street network data:
+Two data files are needed in `data/`:
+
+**GTFS transit feed** (expires every few months - re-download when stale):
+```bash
+curl -L -o data/GTFS.zip "https://www.rideprt.org/developerresources/GTFS.zip"
+```
+If R5 later complains about empty tables (`EmptyTableError`), remove the
+header-only `.txt` files (typically `frequencies.txt`, `fare_rules.txt`)
+from the zip.
+
+**OpenStreetMap extract**: download the Pennsylvania PBF from
+[Geofabrik](https://download.geofabrik.de/north-america/us/pennsylvania.html)
+to `data/pennsylvania.osm.pbf`, then crop it to the Pittsburgh area:
 
 ```bash
-python setup_r5py.py
+python src/crop_osm.py   # writes data/pittsburgh.osm.pbf (~45 MB)
 ```
-
-This will:
-- ✓ Check for Java installation
-- ✓ Install r5py if needed
-- ✓ Verify GTFS data exists
-- ✓ Download Pittsburgh OSM data (~50-100MB)
-
-The OSM data will be saved to `data/pittsburgh.osm` and cached for future use.
 
 ### 6. Create Configuration File
 
@@ -133,8 +137,8 @@ Test that everything is working:
 # Test GTFS loader
 python src/find_stops.py --lat 40.4435 --lon -79.9455 --radius 0.5
 
-# Test r5py routing (may take a minute on first run)
-python src/r5py_router.py
+# Test routing end-to-end (builds the network on first run, ~30 s)
+python src/query.py --latlon 40.4520 -79.9280
 ```
 
 If both commands succeed, you're ready to go!
@@ -159,16 +163,11 @@ pip install r5py
 
 If this fails, check that Java is installed first.
 
-### "OSM download failed"
+### "OSM extract not found"
 
-**Solution**: osmnx couldn't download Pittsburgh data.
-
-Try manually:
-```bash
-python -c "from src.r5py_router import download_osm_data; download_osm_data()"
-```
-
-Or download manually from [OpenStreetMap](https://www.openstreetmap.org/) and place in `data/pittsburgh.osm`.
+**Solution**: download the Pennsylvania PBF from
+[Geofabrik](https://download.geofabrik.de/north-america/us/pennsylvania.html)
+to `data/pennsylvania.osm.pbf` and run `python src/crop_osm.py`.
 
 ### "ImportError: No module named 'rtree'"
 
@@ -284,9 +283,7 @@ If you encounter issues not covered here:
 
 1. Check that Java is installed: `java -version`
 2. Check that Python is 3.9+: `python --version`
-3. Try running setup script again: `python setup_r5py.py`
-4. Check the [r5py documentation](https://r5py.readthedocs.io/)
-5. Check the [osmnx documentation](https://osmnx.readthedocs.io/)
+3. Check the [r5py documentation](https://r5py.readthedocs.io/)
 
 ## Next Steps
 
