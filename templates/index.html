@@ -152,7 +152,8 @@
             <p><strong>How to read this map:</strong></p>
             <p>• Yellow = Fast commute (close to work)</p>
             <p>• Blue = Slower commute (farther from work)</p>
-            <p>• Click any point to see detailed travel time distribution</p>
+            <p>• Each shaded band covers a 10-minute range; hover to see it</p>
+            <p>• Toggle "Grid points" in the map legend for per-point distributions</p>
             <p>• Score represents 80th percentile: your "typical bad day" commute time</p>
         </div>
 
@@ -172,7 +173,8 @@
                 Each grid point represents a potential home location. For each location, we calculated:
             </p>
             <ul style="margin-left: 2rem; line-height: 1.8;">
-                <li><strong>1,560 travel times</strong> - every minute from 6am-7pm, both to and from work</li>
+                <li><strong>781 departure minutes</strong> - leaving home at every minute from 6am-7pm, traveling to work</li>
+                <li><strong>Wait time included</strong> - the clock starts when you walk out the door, not when the bus arrives</li>
                 <li><strong>80th percentile</strong> - the score shown, representing slower commute times</li>
                 <li><strong>Bus frequency matters</strong> - frequent buses show better (lower) scores</li>
             </ul>
@@ -217,79 +219,95 @@
                     '<div class="error">Error loading statistics</div>';
             });
 
-        // Fetch and display heat map
-        fetch('/api/heatmap')
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
+        // Fetch contour bands and point data, then draw the map
+        Promise.all([
+            fetch('/api/contours').then(r => r.json()),
+            fetch('/api/heatmap').then(r => r.json())
+        ])
+            .then(([contours, data]) => {
+                if (contours.error || data.error) {
                     document.getElementById('heatmap').innerHTML =
-                        `<div class="error">${data.message || data.error}</div>`;
+                        `<div class="error">${data.message || data.error || contours.error}</div>`;
                     return;
                 }
 
-                // Prepare data for Plotly
+                const levels = contours.properties.levels;
+                const zmax = levels[levels.length - 1];
+                const colorscale = [
+                    [0, '#FFD700'],     // Yellow (fast)
+                    [0.5, '#4169E1'],   // Royal Blue (medium)
+                    [1, '#00008B']      // Dark Blue (slow)
+                ];
+
+                // Filled contour bands
+                const bandTrace = {
+                    type: 'choroplethmapbox',
+                    name: 'Bands',
+                    geojson: contours,
+                    locations: contours.features.map(f => f.id),
+                    z: contours.features.map(f => f.properties.mid),
+                    zmin: 0,
+                    zmax: zmax,
+                    colorscale: colorscale,
+                    marker: {
+                        opacity: 0.55,
+                        line: { width: 0.5, color: 'rgba(50,50,50,0.35)' }
+                    },
+                    colorbar: {
+                        title: 'Commute<br>Time<br>(min)',
+                        thickness: 20,
+                        len: 0.7,
+                        tickvals: levels
+                    },
+                    text: contours.features.map(f => f.properties.band),
+                    hovertemplate: '<b>%{text}</b><extra></extra>',
+                    showlegend: true
+                };
+
+                // Raw grid points, hidden by default (toggle in legend for
+                // per-point distribution details)
                 const validPoints = data.points.filter(p => p.score !== null);
-
-                const lats = validPoints.map(p => p.lat);
-                const lons = validPoints.map(p => p.lon);
-                const scores = validPoints.map(p => p.score);
-
-                // Create hover text with detailed info
                 const hoverText = validPoints.map(p => {
                     let text = `<b>Travel Time Score: ${p.score.toFixed(1)} min</b><br>`;
                     text += `Location: ${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}<br>`;
-                    text += `Ring: ${p.ring}<br>`;
-                    text += `Reachability: ${(p.reachable_ratio * 100).toFixed(1)}%<br>`;
                     if (p.statistics) {
                         text += `<br><b>Distribution:</b><br>`;
-                        text += `Min: ${p.statistics.min?.toFixed(1)} min<br>`;
-                        text += `Median: ${p.statistics.median?.toFixed(1)} min<br>`;
-                        text += `Max: ${p.statistics.max?.toFixed(1)} min`;
+                        text += `10th %ile: ${p.statistics.p10?.toFixed(1) ?? '—'} min<br>`;
+                        text += `Median: ${p.statistics.p50?.toFixed(1) ?? '—'} min<br>`;
+                        text += `95th %ile: ${p.statistics.p95?.toFixed(1) ?? '—'} min`;
                     }
                     return text;
                 });
-
-                // Create scatter plot with color scale
-                const trace = {
+                const pointTrace = {
                     type: 'scattermapbox',
-                    lat: lats,
-                    lon: lons,
+                    name: 'Grid points',
+                    visible: 'legendonly',
+                    lat: validPoints.map(p => p.lat),
+                    lon: validPoints.map(p => p.lon),
                     mode: 'markers',
                     marker: {
-                        size: 12,
-                        color: scores,
-                        colorscale: [
-                            [0, '#FFD700'],     // Yellow (fast)
-                            [0.5, '#4169E1'],   // Royal Blue (medium)
-                            [1, '#00008B']      // Dark Blue (slow)
-                        ],
-                        showscale: true,
-                        colorbar: {
-                            title: 'Commute<br>Time<br>(min)',
-                            thickness: 20,
-                            len: 0.7
-                        },
-                        cmin: Math.min(...scores),
-                        cmax: Math.max(...scores)
+                        size: 8,
+                        color: validPoints.map(p => p.score),
+                        colorscale: colorscale,
+                        cmin: 0,
+                        cmax: zmax,
+                        showscale: false
                     },
                     text: hoverText,
-                    hovertemplate: '%{text}<extra></extra>'
+                    hovertemplate: '%{text}<extra></extra>',
+                    showlegend: true
                 };
 
-                // Add work location marker
                 const workTrace = {
                     type: 'scattermapbox',
+                    name: 'Work',
                     lat: [data.work_location.lat],
                     lon: [data.work_location.lon],
                     mode: 'markers',
-                    marker: {
-                        size: 20,
-                        color: 'red',
-                        symbol: 'star'
-                    },
+                    marker: { size: 14, color: 'red' },
                     text: '<b>Work Location</b>',
                     hovertemplate: '%{text}<extra></extra>',
-                    name: 'Work'
+                    showlegend: true
                 };
 
                 const layout = {
@@ -299,10 +317,14 @@
                             lat: data.work_location.lat,
                             lon: data.work_location.lon
                         },
-                        zoom: 12
+                        zoom: 11
                     },
                     margin: { t: 0, b: 0, l: 0, r: 0 },
-                    showlegend: false,
+                    showlegend: true,
+                    legend: {
+                        x: 0.01, y: 0.99,
+                        bgcolor: 'rgba(255,255,255,0.8)'
+                    },
                     hovermode: 'closest'
                 };
 
@@ -312,7 +334,7 @@
                     modeBarButtonsToRemove: ['lasso2d', 'select2d']
                 };
 
-                Plotly.newPlot('heatmap', [trace, workTrace], layout, config);
+                Plotly.newPlot('heatmap', [bandTrace, pointTrace, workTrace], layout, config);
             })
             .catch(error => {
                 console.error('Error loading heat map:', error);

@@ -6,6 +6,10 @@ from flask import Flask, render_template, jsonify
 from pathlib import Path
 import json
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+from contours import build_contour_geojson
 
 # Flask app with template folder pointing to project root
 app = Flask(__name__,
@@ -28,13 +32,35 @@ def get_heatmap_data():
     if not heatmap_file.exists():
         return jsonify({
             'error': 'Heat map data not found',
-            'message': 'Run grid_generator.py to generate heat map data first'
+            'message': 'Run src/generate_heatmap.py to generate heat map data first'
         }), 404
 
     with open(heatmap_file, 'r') as f:
         data = json.load(f)
 
     return jsonify(data)
+
+
+@app.route('/api/contours')
+def get_contours():
+    """Filled contour bands as GeoJSON, cached next to the heat map data."""
+    project_root = Path(__file__).parent.parent
+    heatmap_file = project_root / 'heatmap_data.json'
+    cache_file = project_root / 'contours.geojson'
+
+    if not heatmap_file.exists():
+        return jsonify({'error': 'Heat map data not found'}), 404
+
+    if (not cache_file.exists()
+            or cache_file.stat().st_mtime < heatmap_file.stat().st_mtime):
+        geojson = build_contour_geojson(heatmap_file)
+        with open(cache_file, 'w') as f:
+            json.dump(geojson, f)
+    else:
+        with open(cache_file) as f:
+            geojson = json.load(f)
+
+    return jsonify(geojson)
 
 
 @app.route('/api/stats')

@@ -12,13 +12,15 @@ pyproj>=3.6.0  # Coordinate transformations
 rtree>=1.0.0  # Spatial indexing
 
 # Routing
-r5py>=0.1.0  # Fast transit routing with GTFS (requires Java)
+r5py>=1.0.0  # Fast transit routing with GTFS (requires Java)
+osmium>=3.6.0  # Crop OSM PBF extracts (src/crop_osm.py)
 
 # Geocoding
 geopy>=2.4.0  # Address to coordinate conversion
 
 # Visualization
 plotly>=5.18.0  # Interactive plots and maps
+contourpy>=1.3.0  # Filled contour bands for the heat map (ships with matplotlib)
 folium>=0.15.0  # Alternative mapping library
 matplotlib>=3.8.0  # Static plots
 
