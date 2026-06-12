@@ -21,6 +21,7 @@ geopy>=2.4.0  # Address to coordinate conversion
 # Visualization
 plotly>=5.18.0  # Interactive plots and maps
 contourpy>=1.3.0  # Filled contour bands for the heat map (ships with matplotlib)
+contextily>=1.7.0  # OSM basemap tiles for static map rendering
 folium>=0.15.0  # Alternative mapping library
 matplotlib>=3.8.0  # Static plots
 

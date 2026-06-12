@@ -94,6 +94,16 @@ Writes `heatmap_data.json`.
 venv/bin/python src/app.py    # then open http://localhost:5000
 ```
 
+### Render a shareable image
+
+```bash
+venv/bin/python src/render_map.py    # commute_map.png + commute_map.pdf
+```
+
+A large static map (bands over the OSM basemap, legend in the corner) for
+printing or sending to someone without the app. Options: `--formats png
+jpg pdf`, `--width-inches`, `--dpi`, `--title`.
+
 ## Project structure
 
 | File | Purpose |
