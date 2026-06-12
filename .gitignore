@@ -221,3 +221,6 @@ heatmap_data.json
 contours.geojson
 cache/
 bustowork-transfer.tar.gz
+commute_map.png
+commute_map.jpg
+commute_map.pdf
